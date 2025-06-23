@@ -8,17 +8,11 @@ import math
 import sys
 from PIL import ImageFont, ImageDraw, Image
 
-
-
-
-#ステータス
-player_maxhp = player_hp = 100
-player_mp = 100
-enemy_maxhp = enemy_hp = 150 
-
-#回復回数とダメージ
-kaisuu = 0
-damage = 5
+        
+        
+#プレイヤーと敵の設定
+You = Player(100,100,3,20)
+Devil = Enemy(100,10)
 
 #時間設定
 choice_limit = 7
@@ -100,66 +94,71 @@ class CvOverlayImage(object):
         return cv_bgr_result_image
 
 #ボール（敵の攻撃）について
-ball_x = None
-ball_y = 250
-ball_size = 10
-balls = []
-
-for i in range(20):
-    a = random.randint(-20,-10)
-    b = random.randint(10,20)
-    if abs(a)>=abs(b):
-        speed_x = a
-    else:
-        speed_x = b
-    speed_y = random.randint(10,20)
-    ball_angle = random.randint(-90,90)
-    #xの位置,yの位置,x方向のスピード,y方向のスピード,角度
-    balls.append([ball_x,ball_y,speed_x,speed_y,ball_angle])
-
-#壁が下にある時の反射
-def ball_reflection_down(y):
-    global balls
-    if ball[1] >= y:
-        ball[4] = -ball[4]
-        ball[1] = y
+class Enemyball():
     
-#壁が上にある時の反射
-def ball_reflection_up(y):
-    global balls
-    if ball[1] <= y:
-        ball[4] = -ball[4]
-        ball[1] = y
+    def __init__(self):
+        
+        self.ball_x = None
+        self.ball_y = 250
+        self.ball_size = 10
+        self.balls = []
+
+        for i in range(20):
+            self.ball_angle = random.randint(-180,180)
+            self.speed_x = math.cos(math.radians(self.ball_angle))*random.randint(3,8)
+            self.speed_y = -2
+            #xの位置,yの位置,x方向のスピード,y方向のスピード,角度
+            self.balls.append([self.ball_x,self.ball_y,self.speed_x,self.speed_y,self.ball_angle])
+        
+
+    #壁が下にある時の反射
+    def ball_reflection_down(self,ball,y): 
+        
+            if  ball[1] >= y:
+                ball[4] = -ball[4]
+                ball[1] = y
+        
+    #壁が上にある時の反射
+    def ball_reflection_up(self,ball,y):
+        
+            if ball[1] <= y:
+                ball[4] = -ball[4]
+                ball[1] = y
+        
+    #壁が左にある時の反射
+    def ball_reflection_left(self,ball,x):
+        
+            if ball[0] >= x:
+                ball[4] = 180-ball[4]
+                ball[0] = x
     
-#壁が左にある時の反射
-def ball_reflection_left(x):
-    global balls
-    if ball[0] >= x:
-        ball[4] = 180-ball[4]
-        ball[0] = x
-   
-#壁が右にある時の反射     
-def ball_reflection_right(x):
-    global balls
-    if ball[0] <= x:
-        ball[4] = 180-ball[4]
-        ball[0] = x
+    #壁が右にある時の反射     
+    def ball_reflection_right(self,ball,x):
+        
+            if ball[0] <= x:
+                ball[4] = 180-ball[4]
+                ball[0] = x
+        
+
+    def move_ball(self,w,h):
+        
+        # ボール移動
+        for ball in self.balls:
+            ball[0] += round(math.cos(math.radians(ball[4]))*int(self.speed_x))
+            ball[1] += round(math.sin(math.radians(ball[4]))*self.speed_y)
+
+            self.ball_reflection_right(ball,0)
+            self.ball_reflection_left(ball,w)
+            self.ball_reflection_up(ball,0)
+            self.ball_reflection_down(ball,h)
+
+            
+            if ball[4] > 360:
+                ball[4] -= 360
     
-
-def move_ball(ball_x_speed,ball_y_speed):
-    global balls,w,h
-    # ボール移動
-    ball[0] += round(math.cos(math.radians(ball[4]))*ball_x_speed)
-    ball[1] += round(math.sin(math.radians(ball[4]))*ball_y_speed)
-
-    ball_reflection_right(0)
-    ball_reflection_left(w)
-    ball_reflection_up(0)
-    ball_reflection_down(h)
-
-      
-    if ball[4] > 360:
-        ball[4] -= 360
+#敵の攻撃(ボール)を生成
+enemy_ball = Enemyball()
+print(enemy_ball.balls)
 
 #カメラの上下左右を判断
 def right_side(rect):
@@ -249,26 +248,31 @@ button_2 = Button(WIDTH-WIDTH//3,2*HEIGHT/3-100,200,100,"how to play",(0,255,255
 button_3 = Button(WIDTH-WIDTH//3,HEIGHT-300,200,100,"Exit",(0,255,255),(255,255,255),back_to_title)
 
 while running:
-    screen.fill((200,200,0))
+    screen.fill((200,200,150))
     if current == "title":
         screen.blit(text_title,((WIDTH-text_title_w)//2,HEIGHT/3))
         button_1.draw(screen)
         button_2.draw(screen)
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
-                if pygame.K_DELETE:
-                    running = False
+                if event.key == pygame.K_q:
                     sys.exit()
                     
             elif event.type == pygame.MOUSEBUTTONUP:    
                 if button_2.is_clicked(event.pos):
                     button_2.action()
-                    break
+                    
                 
                 elif button_1.is_clicked(event.pos):
                     button_1.action()
-                    break
-    
+                    
+                
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s:
+                    pygame.image.save(screen,"screenshot.png")
+                    print("スクリーンショットを保存しました。")
+                    
+                    
     elif current == "how_to_play_game":
         y_offset = 100
         button_3.draw(screen)
@@ -281,7 +285,7 @@ while running:
             elif rule == "Cureは自分の体力を30回復，3回まで使える":
                 text_rule = font_asobi.render(rule,True,(0,128,0))
             elif rule == "SpecialはMPを30使って攻撃しつつ次の敵のダメージを半減":
-                text_rule = font_asobi.render(rule,True,(255,255,0))
+                text_rule = font_asobi.render(rule,True,(255,255,100))
             else:
                 text_rule = font_asobi.render(rule,True,(0,0,0))
 
@@ -290,14 +294,19 @@ while running:
         
         for event in pygame.event.get():
             if event.type == pygame.KEYDOWN:
-                if pygame.K_DELETE:
+                if event.key == pygame.K_q:
                     running = False
                     sys.exit()
                     
-            if event.type == pygame.MOUSEBUTTONUP:
+            elif event.type == pygame.MOUSEBUTTONUP:
                 if button_3.is_clicked(event.pos):
                     button_3.action()
-               
+            
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_s:
+                    pygame.image.save(screen,"screenshot.png")
+                    print("スクリーンショットを保存しました。")
+                    
            
         
                 
@@ -317,7 +326,7 @@ if camera_started == True:
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades+"haarcascade_frontalface_default.xml")
     w,h = cv2.getWindowImageRect("camera")[2:4]
     
-    for ball in balls:
+    for ball in enemy_ball.balls:
         ball[0] = int(w/2)
     
     while(True):
@@ -333,20 +342,20 @@ if camera_started == True:
             last_event_time = time.time()
         
         #悪魔の画像をカメラに出す．
-        if enemy_hp > 0 and player_hp >0:
+        if Devil.hp > 0 and You.hp >0:
             frame_resize = CvOverlayImage.overlay(frame_resize, devil,(int(w/2)-100,250))
         gray = cv2.cvtColor(frame_resize,cv2.COLOR_BGR2GRAY)
     
     #ステータス表示
-        cv2.putText(frame_resize, f'Player HP: {player_hp}', (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (30, 255, 0), 2)
-        cv2.putText(frame_resize, f'Player MP: {player_mp}', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
-        cv2.putText(frame_resize, f'Cure rest: {3-kaisuu}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,128,0), 2)
-        cv2.putText(frame_resize, f'Enemy HP: {enemy_hp}', (w-500, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        cv2.putText(frame_resize, f'You HP: {You.hp}', (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (30, 255, 0), 2)
+        cv2.putText(frame_resize, f'You MP: {You.mp}', (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+        cv2.putText(frame_resize, f'Cure rest: {You.Cure_remind}', (10, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,128,0), 2)
+        cv2.putText(frame_resize, f'Enemy HP: {Devil.hp}', (w-500, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
         
         #ステータスバー表示
-        cv2.line(frame_resize,(300,30),(int(300+150*player_hp/player_maxhp),30),(0, 255, 0), 3)
-        cv2.line(frame_resize,(300,60),(int(300+150*player_mp/100),60),(255, 255, 0), 3)
-        cv2.line(frame_resize,(w-200,30),(int(w-200+150*enemy_hp/enemy_maxhp),30),(0, 0, 255), 3)
+        cv2.line(frame_resize,(300,30),(int(300+150*You.hp/You.max_hp),30),(0, 255, 0), 3)
+        cv2.line(frame_resize,(300,60),(int(300+150*You.mp/100),60),(255, 255, 0), 3)
+        cv2.line(frame_resize,(w-200,30),(int(w-200+150*Devil.hp/Devil.max_hp),30),(0, 0, 255), 3)
         
         # 顔を検出
         face = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30,30))
@@ -376,13 +385,11 @@ if camera_started == True:
         if choice_time - last_event_time >= choice_limit and action_flag == False:
             for rect in face:
                 if  not right_side(rect) and up_side(rect):
-                    enemy_hp -= attack()
+                    You.attack(Devil)
                 elif not right_side(rect) and not up_side(rect):
-                    player_hp = kaihuku(player_hp,kaisuu)
-                    kaisuu +=1
+                    You.kaihuku()
                 elif right_side(rect) and not up_side(rect):
-                    player_mp,bougyo = special(player_mp)[0],special(player_mp)[2]
-                    enemy_hp -= special(player_mp)[1]
+                    bougyo = You.special(Devil)
                 else:
                     bougyo = True
             action_flag = True
@@ -392,34 +399,37 @@ if camera_started == True:
             cv2.putText(frame_resize, "enemy attack", (int(w/2)-200, 100),cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255),3)
             cv2.putText(frame_resize, f"{int(enemy_turn_time-(choice_time - last_event_time))}",(int(w/2)-20,180),cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 3)
 
-            for ball in balls:
-                cv2.circle(frame_resize,(ball[0],ball[1]),ball_size,(255,0,0),-1)
-                move_ball(ball[2],ball[3])
+            for ball in enemy_ball.balls:
+                cv2.circle(frame_resize,(ball[0],ball[1]),enemy_ball.ball_size,(255,0,0),-1)
+                enemy_ball.move_ball(w,h)
                 
                 # 線にぶつかるとダメージ
                 for rect in face:
+                    # 防御している場合
                     if rect[0]<= ball[0]<=rect[0]+rect[3] and rect[1]-5<=ball[1]<=rect[1]+5 and bougyo == True:
-                        player_hp -= defence(damage)
+                        You.hp -= You.defence(Devil.power)
+                        
+                    # 防御してない場合
                     if rect[0]<= ball[0]<=rect[0]+rect[3] and rect[1]-5<=ball[1]<=rect[1]+5  and bougyo == False:
-                        player_hp -= damage
+                        You.hp -= Devil.power
                     cv2.rectangle(frame_resize,(rect[0],rect[1]-5),(rect[0]+rect[3],rect[1]+5),(0,0,0))
         
         # フラグや防御状態，タイム，ボールの位置をリセット                
-        if choice_time - last_event_time >= enemy_turn_time and player_hp > 0 and enemy_hp > 0:
+        if choice_time - last_event_time >= enemy_turn_time and You.hp > 0 and Devil.hp > 0:
             action_flag = False
             bougyo = False
             last_event_time = choice_time
-            for ball in balls:
+            for ball in enemy_ball.balls:
                 ball[0] = int(w/2)
                 ball[1] = 250
         
         # 勝ち負けを表示
-        if player_hp <= 0:
+        if You.hp <= 0:
             action_flag = True
             finish_flag = True
             cv2.putText(frame_resize, "LOSE", (int(w/2)-200, 360), cv2.FONT_HERSHEY_SIMPLEX, 4, (255, 0, 0), 4)
         
-        if enemy_hp <= 0:
+        if Devil.hp <= 0:
             action_flag = True
             finish_flag = True
             cv2.putText(frame_resize, "WIN!", (int(w/2)-200, 360), cv2.FONT_HERSHEY_SIMPLEX, 4, (0, 0, 255), 4)
